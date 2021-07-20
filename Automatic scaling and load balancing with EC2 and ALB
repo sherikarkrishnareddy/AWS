@@ -6,11 +6,11 @@ An Amazon EC2 Auto Scaling group with an Application Load Balancer (ALB) can aut
 the number of connections made through the ALB. The Deployed application will display a web page that is generated based on content stored in an Amazon S3 bucket.
 
 1)Creating S3 bucket: go to AWS-Console -> Services -> S3 -> Create S3 Bucket 
-name : myS3Bucket, Region : us-east-1, Uncheck block public access, 
+name : kritha, Region : us-east-1, Uncheck block public access, 
 click create bucket, bucket got created.
 
 2)Changing the permission of your bucket.
-search your bucket "myS3Bucket", click on it -> permissions tab -> Under Bucket Policy click Edit and copy and paste the code below into the policy editor
+search your bucket "kritha", click on it -> permissions tab -> Under Bucket Policy click Edit and copy and paste the code below into the policy editor
 
 {
 
@@ -26,7 +26,7 @@ search your bucket "myS3Bucket", click on it -> permissions tab -> Under Bucket 
 
             "Action": "s3:GetObject",
 
-            "Resource": "arn:aws:s3:::myS3Bucket/*"
+            "Resource": "arn:aws:s3:::kritha/*"
 
         }
 
@@ -60,7 +60,7 @@ h1 {
 </body>
 </html>
 
-The file got uploaded to s3 bucket, we cross validate by revisting the myS3Bucket and see the uploaded files.
+The file got uploaded to s3 bucket, we cross validate by revisting the kritha and see the uploaded files.
 
 
 3)we will now create a Target Group and Application Load Balancer. 
@@ -100,7 +100,7 @@ The file got uploaded to s3 bucket, we cross validate by revisting the myS3Bucke
     select the Amazon Linux 2 AMI (HVM) using the 64-bit (x86) architecture
     Under Instance type select t2.micro
     Under Network Settings select the "HTTPInbound" security group
-    Under Advanced details copy and paste the below code into the User data area, with your bucketname(myS3Bucket)
+    Under Advanced details copy and paste the below code into the User data area, with your bucketname(kritha)
     #user-data-httpd.sh
         #!/bin/bash
         yum update -y
@@ -108,7 +108,7 @@ The file got uploaded to s3 bucket, we cross validate by revisting the myS3Bucke
         systemctl start httpd
         systemctl enable httpd
         cd /var/www/html
-        curl https://myS3Bucket.amazonaws.com/index.txt --output index.txt
+        curl https://kritha.amazonaws.com/index.txt --output index.txt
         EC2AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone) 
         sed "s/INSTANCEID/$EC2AZ/" index.txt > index.html
         #your greping the ec2 availabilty zone and replacing INSTANCEID with it.
