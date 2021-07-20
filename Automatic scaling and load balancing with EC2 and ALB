@@ -1,0 +1,135 @@
+We will deploy a web application on EC2 instances behind an elastic load balancer with automatic scaling
+and demonstrate the benefits and processes of elasticity and high availability in the AWS Cloud and also understand the core AWS 
+services required to run a web application in the AWS Cloud
+
+An Amazon EC2 Auto Scaling group with an Application Load Balancer (ALB) can automatically scale based on 
+the number of connections made through the ALB. The Deployed application will display a web page that is generated based on content stored in an Amazon S3 bucket.
+
+1)Creating S3 bucket: go to AWS-Console -> Services -> S3 -> Create S3 Bucket 
+name : myS3Bucket, Region : us-east-1, Uncheck block public access, 
+click create bucket, bucket got created.
+
+2)Changing the permission of your bucket.
+search your bucket "myS3Bucket", click on it -> permissions tab -> Under Bucket Policy click Edit and copy and paste the code below into the policy editor
+
+{
+
+    "Version": "2012-10-17",
+
+    "Statement": [
+
+        {
+
+            "Effect": "Allow",
+
+            "Principal": "*",
+
+            "Action": "s3:GetObject",
+
+            "Resource": "arn:aws:s3:::myS3Bucket/*"
+
+        }
+
+    ]
+
+}
+
+Click Save changes
+
+On the Objects tab, click Upload, select the index.txt file from the your computer, and click Upload
+
+index.txt
+
+<html>
+<head>
+<style>
+body {
+  background-color: #33342D;
+}
+h1 { color: white; }
+h1 {
+ text-align:center
+}
+</style>
+</head>
+<body>
+
+<h1>This Amazon EC2 instance is located in Availability Zone:</h1>
+  <h1>INSTANCEID</h1>
+
+</body>
+</html>
+
+The file got uploaded to s3 bucket, we cross validate by revisting the myS3Bucket and see the uploaded files.
+
+
+3)we will now create a Target Group and Application Load Balancer. 
+  The ALB will be configured to distribute connections to the Target Group which will contain the instances 
+  launched by the Auto Scaling group.
+
+  go to AWS-Console -> Services -> EC2 -> Target Groups -> Create target group
+        On the Basic configuration page, leave the default values selected, enter the Target group name as "HTTPTargets" 
+        and click Next, then click Create target group
+
+
+  go to AWS-Console -> Services -> EC2 ->  Load Balancers -> Create Load Balancer -> Create under Application Load Balancer
+        On the Basic Configuration page, enter the Name as "HTTPLoadBalancing"
+        VPC of ALB should be same as that of Target Groups
+        Under Availability Zones enable at least three Availability Zones 
+        us-east-1a,us-east-1b,us-east-1c.
+
+        Click Next: Configure Security Settings, and then Next: Configure Security Groups
+        Choose the option to Create a new security group, enter the Security group name as "HTTPInbound" and the Description as "Allow HTTP". 
+        Type : Custom TCP, Protocol : TCP, Port:80, Source: custome 0.0.0.0/0,::/0 
+
+        Click Next: Configure Routing and under Target group select Existing target group and ensure the "HTTPTargets" 
+        target group is selected
+
+        Click Next: Register Targets, and then Next: Review, and finally Create to create the load balancer.
+        
+        
+4)Creating Launch Template and Auto Scaling Group :
+
+  we will now create a launch template with user data that picks up the index.txt file from the Amazon S3 bucket 
+  and configures a web page on EC2 instances that describes which Availability Zone the EC2 instance is located in. 
+
+  we will also create an Amazon EC2 Auto Scaling group that uses the launch configuration.
+
+  go to AWS-Console -> Services -> EC2 -> Launch Templates -> Create launch template
+    For Launch template name enter "HTTPWebServer". 
+    select the Amazon Linux 2 AMI (HVM) using the 64-bit (x86) architecture
+    Under Instance type select t2.micro
+    Under Network Settings select the "HTTPInbound" security group
+    Under Advanced details copy and paste the below code into the User data area, with your bucketname(myS3Bucket)
+    #user-data-httpd.sh
+        #!/bin/bash
+        yum update -y
+        yum install httpd -y
+        systemctl start httpd
+        systemctl enable httpd
+        cd /var/www/html
+        curl https://myS3Bucket.amazonaws.com/index.txt --output index.txt
+        EC2AZ=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone) 
+        sed "s/INSTANCEID/$EC2AZ/" index.txt > index.html
+        #your greping the ec2 availabilty zone and replacing INSTANCEID with it.
+
+    Click Create launch template
+
+  go to EC2-Console -> Auto Scaling Groups -> Create Auto Scaling group
+    For Auto Scaling group name enter "MyWebServers" 
+    under Launch template select the HTTPWebServer launch template and then click Next
+    Under Network select same VPC as that of TG, ALP, LaunchTemplate add the same subnets (at least three) that 
+    we selected for the load balancer and then click Next
+    Under Load balancing select Attach to an existing load balancer and 
+    select the HTTPTargets target group and then click Next
+    Set the Group size to the following values:
+      Desired capacity = 2
+      Minimum capacity = 1
+    Maximum capacity = 6
+    Under Scaling policies select Target tracking scaling policy and for Metric type 
+    select Application Load Balancer request count per target. 
+    Select the HTTPTargets target group and enter the Target value as "5"
+    Then click Next 3 times and then finally Create Auto Scaling group
+5)Test with Multiple connection request, the moment the requests are crossing more than 5, the new instance will be scaled up, 
+  if stopped accessing the webpage, the instances will be scaled down based on the desired value which we set.
+  
