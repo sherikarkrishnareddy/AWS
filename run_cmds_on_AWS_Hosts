@@ -1,0 +1,47 @@
+import boto3
+import paramiko
+import re
+import datetime
+import os
+dt=datetime.datetime.now()
+dt=dt.strftime("%H_%M__%d_%m_%Y")
+out="aws_cmd_output_"+dt+".txt"
+ses=boto3.Session(profile_name="aws",region_name="us-east-2")
+ec2_res=ses.resource(service_name="ec2")
+print(ec2_res)
+c=0
+with open(out,"w") as wr:
+    for each_in in ec2_res.instances.all():
+        c+=1
+        for tags in each_in.tags:
+            hostname=tags['Value']
+            if(tags['Key'] == 'Name'):
+                if('prd' in tags['Value']):
+                    key=paramiko.RSAKey.from_private_key_file('path to .pem key','passphrase if set for the key')
+                elif('stg' in tags['Value']):
+                    key=paramiko.RSAKey.from_private_key_file('path to .pem key','passphrase if set for the key')
+                elif('tst' in tags['Value']):
+                    key=paramiko.RSAKey.from_private_key_file('path to .pem key','passphrase if set for the key')
+                elif('dev' in tags['Value']):
+                    key=paramiko.RSAKey.from_private_key_file('path to .pem key','passphrase if set for the key')
+                else:
+                    key=paramiko.RSAKey.from_private_key_file('path to .pem key','passphrase if set for the key')
+                client=paramiko.SSHClient()
+                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                try:
+                    #Here 'ubuntu' is a default user name and instance_ip is public IP or name of EC2 instances
+                    client.connect(hostname,port=22,username="username",password="")
+                    ssh_stdin, ssh_stdout, ssh_stderr =ssh.exec_command("ps -A | grep 'process1\|process2\|process3",get_pty=True)
+            		opt=ssh_stdout.readlines()
+            		opt="".join(opt)
+            		print(opt+" "+str(c))
+            		ot.writelines(hostname+"\n\n")
+            		ot.writelines(opt+"$")
+            		ssh_stdin,ssh_stdout,ssh_stderr=ssh.exec_command(chr(26))
+            		ssh_stdin,ssh_stdout,ssh_stderr=ssh.exec_command("exit")
+            		ssh_stdin.flush()
+            		ssh_stdin.close()
+            		ssh.close()
+                except Exception as e:
+                    print(e)
+                    wr.writelines("hostname "+hostname+"access issue "+str(c)+"\n")
